@@ -10,11 +10,14 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="com.baobomb.handsdetection.MainActivity">
 
-    <ImageView
-        android:id="@+id/img"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:maxHeight="100dp"
-        android:maxWidth="100dp"
-        android:layout_centerInParent="true"/>
+    <com.baobomb.handsdetection.gpuimage.GPUImageView
+        android:id="@+id/gpuImageView"
+        android:layout_width="400dp"
+        android:layout_height="300dp" />
+
+    <com.baobomb.handsdetection.gpuimage.GPUImageView
+        android:id="@+id/detectImageView"
+        android:layout_width="400dp"
+        android:layout_height="300dp"
+        android:layout_below="@+id/gpuImageView" />
 </RelativeLayout>

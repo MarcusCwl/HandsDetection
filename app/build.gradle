@@ -10,10 +10,13 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        ndk {
+            abiFilters 'x86', 'mips', "armeabi"
+        }
         externalNativeBuild {
             cmake {
                 cppFlags "-std=c++11 -frtti -fexceptions"
-                abiFilters 'x86' , 'mips' ,'armeabi'
+                abiFilters 'x86', 'mips', 'armeabi'
             }
         }
     }
@@ -22,10 +25,21 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+        sourceSets {
+            main {
+                jni.srcDirs = []
+                jniLibs.srcDirs = ['src/main/jniLibs']
+            }
+        }
     }
     externalNativeBuild {
         cmake {
             path "CMakeLists.txt"
+        }
+    }
+    repositories {
+        flatDir {
+            dirs 'libs'
         }
     }
 }
@@ -37,5 +51,7 @@ dependencies {
     })
     compile 'com.android.support:appcompat-v7:25.1.0'
     testCompile 'junit:junit:4.12'
+    compile(name: 'rkthermallib-release', ext: 'aar')
+    compile(name: 'PhotonEyeSdk-release', ext: 'aar')
     compile project(':openCVLibrary320')
 }

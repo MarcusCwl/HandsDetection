@@ -23,9 +23,17 @@ add_library( # Sets the name of the library.
 
 add_library(lib_opencv SHARED IMPORTED)
 
-set_target_properties(lib_opencv PROPERTIES IMPORTED_LOCATION ~/Documents/Android-code/HandsDetection/app/src/main/jniLibs/${ANDROID_ABI}/libopencv_java3.so)
+# For mac
+# set_target_properties(lib_opencv PROPERTIES IMPORTED_LOCATION ~/Documents/Android-code/HandsDetection/app/src/main/jniLibs/${ANDROID_ABI}/libopencv_java3.so)
 
-include_directories(~/Documents/Android-code/OpenCV-android-sdk/sdk/native/jni/include)
+# For Windows
+set_target_properties(lib_opencv PROPERTIES IMPORTED_LOCATION D:/AndroidCode/MR360/HandsDetection/HandsDetection/app/src/main/jniLibs/${ANDROID_ABI}/libopencv_java3.so)
+
+# For mac
+# include_directories(~/Documents/Android-code/OpenCV-android-sdk/sdk/native/jni/include)
+
+# For Windows
+include_directories(D:/AndroidCode/opencv-3.2.0-android-sdk/OpenCV-android-sdk/sdk/native/jni/include)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
 
