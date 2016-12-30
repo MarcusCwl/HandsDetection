@@ -14,12 +14,14 @@
     <com.baobomb.handsdetection.gpuimage.GPUImageView
         android:id="@+id/gpuImageView"
         android:layout_width="400dp"
-        android:layout_height="300dp" />
+        android:layout_height="300dp"
+        android:visibility="invisible"/>
 
     <com.baobomb.handsdetection.gpuimage.GPUImageView
         android:id="@+id/detectImageView"
         android:layout_width="400dp"
         android:layout_height="300dp"
+        android:visibility="invisible"
         android:layout_below="@+id/gpuImageView" />
 
     <!--設定Camera_id -1為不指定 99為後鏡頭 98為前鏡頭 預設為-1不指定-->
@@ -27,6 +29,6 @@
         android:id="@+id/cameraView"
         android:layout_width="400dp"
         android:layout_height="300dp"
-        android:layout_alignParentRight="true"
-        apps:camera_id="-1" />
+        android:layout_centerInParent="true"
+        apps:camera_id="98" />
 </RelativeLayout>

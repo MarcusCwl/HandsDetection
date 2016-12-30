@@ -6,30 +6,34 @@ import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.widget.ImageView;
-import android.widget.RelativeLayout;
-import android.widget.TextView;
+import android.util.Log;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.WindowManager;
 import android.widget.Toast;
 
 import com.baobomb.handsdetection.gpuimage.GPUImageView;
 
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.Utils;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
 
-public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2, HandsDetecterCallBack {
-    Mat nativeMat = new Mat();
-    HandsDetecter handsDetecter = new HandsDetecter(this);
-    ThermalHandler thermalHandler;
-    GPUImageView gpuImageView;
-    GPUImageView detectImageView;
+public class MainActivity extends AppCompatActivity implements MotionDetecterCallBack, CameraBridgeViewBase.CvCameraViewListener2, View.OnTouchListener {
+    MotionDetecter motionDetecter = new MotionDetecter(this);
     CameraBridgeViewBase mOpenCvCameraView;
+    Mat skinMat = new Mat();
+    Mat gray = new Mat();
+    Mat outputGray = new Mat();
+    boolean isHandsRectSet = false;
+    boolean isHandsRectSetting = false;
+    int frameCount = 0;
     // Used to load the 'native-lib' library on application startup.
     Handler handler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
-            Toast.makeText(MainActivity.this, "偵測到手部移動", Toast.LENGTH_SHORT).show();
+            Toast.makeText(MainActivity.this, msg.obj.toString(), Toast.LENGTH_SHORT).show();
         }
     };
 
@@ -38,53 +42,37 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     @Override
-    public void onMove() {
+    public void onMove(String moveType) {
         Message message = Message.obtain(handler);
-        message.arg1 = 0;
+        message.obj = moveType;
         message.sendToTarget();
+    }
+
+    @Override
+    public void onMove(String modeType, int moveX, int moveY, int positionX, int positionY) {
+        Log.d("Move", modeType + "MoveX : " + moveX + " MoveY : " + moveY + " PositionX : " + positionX + " PositionY : " + positionY);
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        gpuImageView = (GPUImageView) findViewById(R.id.gpuImageView);
-        detectImageView = (GPUImageView) findViewById(R.id.detectImageView);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        setContentView(R.layout.activity_match);
         mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.cameraView);
         mOpenCvCameraView.setCvCameraViewListener(this);
+        mOpenCvCameraView.setOnTouchListener(this);
         mOpenCvCameraView.enableView();
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        thermalHandler = new ThermalHandler();
-        thermalHandler.init();
-        thermalHandler.setListener(new ThermalHandler.OnLeptonListener() {
-            @Override
-            public void onLeptonFrameReceive(Bitmap bitmap, int centerTem) {
-                Mat empty = new Mat();
-                Utils.bitmapToMat(bitmap, nativeMat);
-                handsDetecter.detectFromThermal(nativeMat, empty);
-                Bitmap dstBitmap = Bitmap.createBitmap(empty.cols(), empty.rows(), Bitmap.Config.ARGB_8888);
-                Utils.matToBitmap(empty, dstBitmap);
-                Bitmap nativeBitmap = Bitmap.createBitmap(nativeMat.cols(), nativeMat.rows(), Bitmap.Config.ARGB_8888);
-                Utils.matToBitmap(nativeMat, nativeBitmap);
-//                detectImageView.setImage(dstBitmap);
-                gpuImageView.setImage(nativeBitmap);
-            }
-        });
-//        handsDetecter.detect(nativeMat, empty);
-//        Bitmap dstBitmap = Bitmap.createBitmap(empty.cols(), empty.rows(), Bitmap.Config.ARGB_8888);
-//        Utils.matToBitmap(empty,dstBitmap);
-//        Bitmap dstBitmap = Bitmap.createBitmap(nativeMat.cols(),nativeMat.rows(), Bitmap.Config.ARGB_8888);
-//        Utils.matToBitmap(nativeMat,dstBitmap);
-//        imageView.setImageBitmap(dstBitmap);
     }
 
     @Override
     public void onCameraViewStarted(int width, int height) {
-
+        gray = new Mat(height, width, CvType.CV_8UC4);
+        outputGray = new Mat(height, width, CvType.CV_8UC4);
     }
 
     @Override
@@ -92,12 +80,40 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 //        mGray.release();
     }
 
+    @Override
+    public boolean onTouch(View view, MotionEvent motionEvent) {
+        isHandsRectSetting = true;
+        return false;
+    }
 
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-        Mat mRgba = inputFrame.rgba();
-        Mat empty = new Mat();
-        handsDetecter.detectFromCamera(mRgba);
-        return mRgba;
+        gray = inputFrame.gray();
+
+        if (isHandsRectSet) {
+            if (frameCount >= 0) {
+                motionDetecter.detectFromCam(gray, skinMat, outputGray);
+                frameCount = 0;
+            } else {
+                frameCount++;
+            }
+        } else if (isHandsRectSetting) {
+            outputGray = inputFrame.gray();
+            motionDetecter.setHandsRectMat(gray, skinMat);
+            isHandsRectSet = true;
+            isHandsRectSetting = false;
+        } else {
+            outputGray = inputFrame.gray();
+            motionDetecter.setHandsDetectRect(gray);
+        }
+//        if (isCheckColor) {
+//            Mat empty = new Mat();
+//            handsDetecter.detectFromCamera(mrgba);
+//        } else {
+//            Point center = new Point(mrgba.cols() / 2, mrgba.rows() / 2);
+//            Imgproc.circle(mrgba, center, 150, new Scalar(255, 255, 255));
+//        }
+//        return mrgba;
+        return outputGray;
     }
 }

@@ -6,7 +6,6 @@ package com.baobomb.handsdetection;
 
 public class Singleton {
     private static Singleton m_Instance;
-    public ThermalHandler thermalHandler;
 
     public Singleton() {
         super();

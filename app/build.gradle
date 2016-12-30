@@ -1,8 +1,8 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 25
-    buildToolsVersion "25.0.0"
+    compileSdkVersion 24
+    buildToolsVersion "24.0.0"
     defaultConfig {
         applicationId "com.baobomb.handsdetection"
         minSdkVersion 21
@@ -11,12 +11,12 @@ android {
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         ndk {
-            abiFilters 'x86', 'mips', "armeabi"
+            abiFilters 'x86', 'mips', "armeabi","armeabi-v7a"
         }
         externalNativeBuild {
             cmake {
                 cppFlags "-std=c++11 -frtti -fexceptions"
-                abiFilters 'x86', 'mips', 'armeabi'
+                abiFilters 'x86', 'mips', 'armeabi',"armeabi-v7a"
             }
         }
     }
@@ -37,11 +37,6 @@ android {
             path "CMakeLists.txt"
         }
     }
-    repositories {
-        flatDir {
-            dirs 'libs'
-        }
-    }
 }
 
 dependencies {
@@ -51,7 +46,5 @@ dependencies {
     })
     compile 'com.android.support:appcompat-v7:25.1.0'
     testCompile 'junit:junit:4.12'
-    compile(name: 'rkthermallib-release', ext: 'aar')
-    compile(name: 'PhotonEyeSdk-release', ext: 'aar')
     compile project(':openCVLibrary320')
 }

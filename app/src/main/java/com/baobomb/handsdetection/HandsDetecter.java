@@ -29,12 +29,23 @@ public class HandsDetecter {
         detectFromCamera(nativeMat.getNativeObjAddr());
     }
 
+    public void setSkinColor(Mat nativeMat, int screenWidth, int screenHeight, int screenCenterX, int screenCenterY) {
+        setSkinColor(nativeMat.getNativeObjAddr(), screenWidth, screenHeight, screenCenterX, screenCenterY);
+    }
+
     public static void handsMove(String msg) {
         Log.d("Bao", msg);
-        handsDetecterCallBack.onMove();
+        handsDetecterCallBack.onMove(msg);
+    }
+
+    public static void handsMove(String msg, int moveX, int moveY, int positionX, int positionY) {
+        Log.d("Bao", msg);
+        handsDetecterCallBack.onMove(msg, moveX, moveY, positionX, positionY);
     }
 
     public native void detectFromThermal(long nativeMat, long empty);
 
     public native void detectFromCamera(long nativeMat);
+
+    public native void setSkinColor(long nativeMat, int screenWidth, int screenHeight, int screenCenterX, int screenCenterY);
 }
