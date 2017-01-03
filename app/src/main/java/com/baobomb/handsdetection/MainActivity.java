@@ -23,12 +23,28 @@ import org.opencv.imgproc.Imgproc;
 public class MainActivity extends AppCompatActivity implements MotionDetecterCallBack, CameraBridgeViewBase.CvCameraViewListener2, View.OnTouchListener {
     MotionDetecter motionDetecter = new MotionDetecter(this);
     CameraBridgeViewBase mOpenCvCameraView;
-    Mat skinMat = new Mat();
-    Mat gray = new Mat();
-    Mat outputGray = new Mat();
-    boolean isHandsRectSet = false;
-    boolean isHandsRectSetting = false;
+    SensorUtil sensorUtil;
+
+    //動態檢測-固定背景
+//    Mat backgroundMat;
+//    Mat foregroundMat;
+//    Mat outputMat;
+//    boolean isBackgroundSet = false;
+
+    //動態檢測-即時更新背景
+    Mat firstMat;
+    Mat secondMat;
+    Mat outputMat;
     int frameCount = 0;
+
+    //相同區域檢測
+//    Mat gray = new Mat();
+//    Mat skinMat = new Mat();
+//    Mat outputGray = new Mat();
+//    boolean isHandsRectSet = false;
+//    boolean isHandsRectSetting = false;
+//    int frameCount = 0;
+
     // Used to load the 'native-lib' library on application startup.
     Handler handler = new Handler() {
         @Override
@@ -58,6 +74,7 @@ public class MainActivity extends AppCompatActivity implements MotionDetecterCal
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_match);
+        sensorUtil = new SensorUtil(this);
         mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.cameraView);
         mOpenCvCameraView.setCvCameraViewListener(this);
         mOpenCvCameraView.setOnTouchListener(this);
@@ -71,8 +88,12 @@ public class MainActivity extends AppCompatActivity implements MotionDetecterCal
 
     @Override
     public void onCameraViewStarted(int width, int height) {
-        gray = new Mat(height, width, CvType.CV_8UC4);
-        outputGray = new Mat(height, width, CvType.CV_8UC4);
+        //動態檢測
+        outputMat = new Mat(height, width, CvType.CV_8UC4);
+
+        //相同區域檢測
+//        gray = new Mat(height, width, CvType.CV_8UC4);
+//        outputGray = new Mat(height, width, CvType.CV_8UC4);
     }
 
     @Override
@@ -82,38 +103,58 @@ public class MainActivity extends AppCompatActivity implements MotionDetecterCal
 
     @Override
     public boolean onTouch(View view, MotionEvent motionEvent) {
-        isHandsRectSetting = true;
+        //相同區域檢測
+//        isHandsRectSetting = true;
         return false;
     }
 
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-        gray = inputFrame.gray();
-
-        if (isHandsRectSet) {
-            if (frameCount >= 0) {
-                motionDetecter.detectFromCam(gray, skinMat, outputGray);
-                frameCount = 0;
-            } else {
-                frameCount++;
-            }
-        } else if (isHandsRectSetting) {
-            outputGray = inputFrame.gray();
-            motionDetecter.setHandsRectMat(gray, skinMat);
-            isHandsRectSet = true;
-            isHandsRectSetting = false;
-        } else {
-            outputGray = inputFrame.gray();
-            motionDetecter.setHandsDetectRect(gray);
-        }
-//        if (isCheckColor) {
-//            Mat empty = new Mat();
-//            handsDetecter.detectFromCamera(mrgba);
+        //動態檢測-固定背景
+//        if (!isBackgroundSet) {
+//            backgroundMat = inputFrame.gray();
+//            motionDetecter.setBackground(backgroundMat);
+//            isBackgroundSet = true;
 //        } else {
-//            Point center = new Point(mrgba.cols() / 2, mrgba.rows() / 2);
-//            Imgproc.circle(mrgba, center, 150, new Scalar(255, 255, 255));
+//            foregroundMat = inputFrame.gray();
+//            motionDetecter.detectFromCam(backgroundMat, foregroundMat, outputMat);
+//            return outputMat;
 //        }
-//        return mrgba;
-        return outputGray;
+//        return outputMat;
+        //動態檢測-即時更新背景
+        if (frameCount == 0) {
+            firstMat = inputFrame.gray();
+            sensorUtil.lockSensor();
+            frameCount++;
+        } else if (frameCount == 1) {
+            secondMat = inputFrame.gray();
+            if (!sensorUtil.isMove()) {
+                motionDetecter.detectFromCam(firstMat, secondMat, outputMat);
+                return outputMat;
+            }
+            frameCount = 0;
+            sensorUtil.unLockSensor();
+        }
+        return outputMat;
+
+        //相同區域檢測
+//        gray = inputFrame.gray();
+//        if (isHandsRectSet) {
+//            if (frameCount >= 0) {
+//                motionDetecter.detectFromCam(gray, skinMat, outputGray);
+//                frameCount = 0;
+//            } else {
+//                frameCount++;
+//            }
+//        } else if (isHandsRectSetting) {
+//            outputGray = inputFrame.gray();
+//            motionDetecter.setHandsRectMat(gray, skinMat);
+//            isHandsRectSet = true;
+//            isHandsRectSetting = false;
+//        } else {
+//            outputGray = inputFrame.gray();
+//            motionDetecter.setHandsDetectRect(gray);
+//        }
+//        return outputGray;
     }
 }

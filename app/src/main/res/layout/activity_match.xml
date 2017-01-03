@@ -12,5 +12,5 @@
         android:layout_width="400dp"
         android:layout_height="300dp"
         android:layout_centerInParent="true"
-        apps:camera_id="99" />
+        apps:camera_id="98" />
 </RelativeLayout>
