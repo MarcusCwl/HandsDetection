@@ -29,8 +29,13 @@ public class HandsDetecter {
         detectFromCamera(nativeMat.getNativeObjAddr());
     }
 
-    public void setSkinColor(Mat nativeMat, int screenWidth, int screenHeight, int screenCenterX, int screenCenterY) {
-        setSkinColor(nativeMat.getNativeObjAddr(), screenWidth, screenHeight, screenCenterX, screenCenterY);
+    public void setSkinColor(Mat nativeMat) {
+        setSkinColor(nativeMat.getNativeObjAddr());
+    }
+
+    //相同區域檢測-設置手部檢測區域
+    public void setHandsDetectRect(Mat holeMat) {
+        setHandsDetectRect(holeMat.getNativeObjAddr());
     }
 
     public static void handsMove(String msg) {
@@ -47,5 +52,7 @@ public class HandsDetecter {
 
     public native void detectFromCamera(long nativeMat);
 
-    public native void setSkinColor(long nativeMat, int screenWidth, int screenHeight, int screenCenterX, int screenCenterY);
+    public native void setSkinColor(long nativeMat);
+
+    public native void setHandsDetectRect(long holeFrame);
 }

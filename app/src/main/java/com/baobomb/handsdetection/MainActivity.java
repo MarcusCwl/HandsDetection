@@ -12,6 +12,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import com.baobomb.handsdetection.gpuimage.GPUImage;
 import com.baobomb.handsdetection.gpuimage.GPUImageView;
 
 import org.opencv.android.CameraBridgeViewBase;
@@ -20,10 +21,10 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
 
-public class MainActivity extends AppCompatActivity implements MotionDetecterCallBack, CameraBridgeViewBase.CvCameraViewListener2, View.OnTouchListener {
-    MotionDetecter motionDetecter = new MotionDetecter(this);
+public class MainActivity extends AppCompatActivity implements HandsDetecterCallBack, CameraBridgeViewBase.CvCameraViewListener2, View.OnTouchListener {
+    HandsDetecter handsDetecter = new HandsDetecter(this);
     CameraBridgeViewBase mOpenCvCameraView;
-    SensorUtil sensorUtil;
+    GPUImageView gpuImageView;
 
     //動態檢測-固定背景
 //    Mat backgroundMat;
@@ -36,6 +37,10 @@ public class MainActivity extends AppCompatActivity implements MotionDetecterCal
     Mat secondMat;
     Mat outputMat;
     int frameCount = 0;
+    boolean isSkinColorSet = false;
+    boolean isSkinColorSetting = false;
+    Mat rgba;
+    Bitmap bitmap = null;
 
     //相同區域檢測
 //    Mat gray = new Mat();
@@ -74,7 +79,8 @@ public class MainActivity extends AppCompatActivity implements MotionDetecterCal
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_match);
-        sensorUtil = new SensorUtil(this);
+//        gpuImageView = (GPUImageView) findViewById(R.id.gpuImageView);
+//        gpuImageView.setOnTouchListener(this);
         mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.cameraView);
         mOpenCvCameraView.setCvCameraViewListener(this);
         mOpenCvCameraView.setOnTouchListener(this);
@@ -90,7 +96,6 @@ public class MainActivity extends AppCompatActivity implements MotionDetecterCal
     public void onCameraViewStarted(int width, int height) {
         //動態檢測
         outputMat = new Mat(height, width, CvType.CV_8UC4);
-
         //相同區域檢測
 //        gray = new Mat(height, width, CvType.CV_8UC4);
 //        outputGray = new Mat(height, width, CvType.CV_8UC4);
@@ -104,7 +109,7 @@ public class MainActivity extends AppCompatActivity implements MotionDetecterCal
     @Override
     public boolean onTouch(View view, MotionEvent motionEvent) {
         //相同區域檢測
-//        isHandsRectSetting = true;
+        isSkinColorSetting = true;
         return false;
     }
 
@@ -122,20 +127,41 @@ public class MainActivity extends AppCompatActivity implements MotionDetecterCal
 //        }
 //        return outputMat;
         //動態檢測-即時更新背景
-        if (frameCount == 0) {
-            firstMat = inputFrame.gray();
-            sensorUtil.lockSensor();
-            frameCount++;
-        } else if (frameCount == 1) {
-            secondMat = inputFrame.gray();
-            if (!sensorUtil.isMove()) {
-                motionDetecter.detectFromCam(firstMat, secondMat, outputMat);
-                return outputMat;
+//        if (frameCount == 0) {
+//            firstMat = inputFrame.gray();
+//            sensorUtil.lockSensor();
+//            frameCount++;
+//        } else if (frameCount == 1) {
+//            secondMat = inputFrame.gray();
+//            if (!sensorUtil.isMove()) {
+//                motionDetecter.detectFromCam(firstMat, secondMat, outputMat);
+//                return outputMat;
+//            }
+//            frameCount = 0;
+//            sensorUtil.unLockSensor();
+//        }
+        try {
+            rgba = inputFrame.rgba();
+            if (isSkinColorSetting) {
+                handsDetecter.setSkinColor(rgba);
+                isSkinColorSetting = false;
+                isSkinColorSet = true;
             }
-            frameCount = 0;
-            sensorUtil.unLockSensor();
+
+            if (!isSkinColorSet) {
+                handsDetecter.setHandsDetectRect(rgba);
+            } else {
+                handsDetecter.detectFromCamera(rgba);
+            }
+        } catch (Exception e) {
+            String error = e.toString();
         }
-        return outputMat;
+//        if (bitmap == null) {
+//            bitmap = Bitmap.createBitmap(rgba.cols(), rgba.rows(), Bitmap.Config.ARGB_8888);
+//        }
+//        Utils.matToBitmap(rgba, bitmap);
+//        gpuImageView.setImage(bitmap);
+        return rgba;
 
         //相同區域檢測
 //        gray = inputFrame.gray();

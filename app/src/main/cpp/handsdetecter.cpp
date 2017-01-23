@@ -17,11 +17,36 @@ int positionX;
 int positionY;
 int moveX;
 int moveY;
+int rectHeight;
 Mat mPyrDownMat;
 Mat mHsvMat;
 Mat mMask;
 Mat mDilatedMask;
 Mat mHierarchy;
+Rect detectRect = Rect();
+
+void setHandsDetectRect(Mat *holeMat) {
+    //相機寬
+    int cols = holeMat->cols;
+    //相機高
+    int rows = holeMat->rows;
+    int x = cols / 2;
+    int y = rows / 2;
+    int width = cols / 5;
+    int height = rows / 5;
+    if (detectRect.x == 0) {
+        detectRect.x = x - width / 2;
+        detectRect.width = width;
+    }
+    if (detectRect.y == 0) {
+        detectRect.y = y - height / 2;
+        detectRect.height = height;
+    }
+    rectangle(*holeMat, Point(detectRect.x, detectRect.y),
+              Point(detectRect.x + detectRect.width, detectRect.y + detectRect.height),
+              Scalar(255, 0, 0), 1, 8,
+              0);
+}
 
 //手部移動Call
 void handsMove(JNIEnv *env, int moveType) {
@@ -38,22 +63,27 @@ void handsMove(JNIEnv *env, int moveType) {
     //回调java中的方法
     if (moveType == 4) {
         env->CallStaticVoidMethod(cls, mid, env->NewStringUTF("right"));
+        ifInit = 1;
     } else if (moveType == 5) {
         env->CallStaticVoidMethod(cls, mid, env->NewStringUTF("left"));
+        ifInit = 1;
     } else if (moveType == 6) {
         env->CallStaticVoidMethod(cls, mid, env->NewStringUTF("down"));
+        ifInit = 1;
     } else if (moveType == 7) {
         env->CallStaticVoidMethod(cls, mid, env->NewStringUTF("up"));
+        ifInit = 1;
     } else if (moveType == 8) {
         env->CallStaticVoidMethod(cls, mid, env->NewStringUTF("move"), moveX, moveY, positionX,
                                   positionY);
+    } else if (moveType == 9) {
+        env->CallStaticVoidMethod(cls, mid, env->NewStringUTF("Tap"));
+        ifInit = 1;
     }
-    ifInit = 1;
 }
 
 //設定中心點平均色
-void setSkinColor(Mat *skinRect, int screenWidth, int screenHeight, int screenCenterX,
-                  int screenCenterY) {
+void setSkinColor(Mat *skinRect) {
     Scalar mColorRadius = Scalar(25, 50, 50, 0);
     Mat mRgba = Mat();
     skinRect->copyTo(mRgba);
@@ -62,11 +92,11 @@ void setSkinColor(Mat *skinRect, int screenWidth, int screenHeight, int screenCe
     //相機高
     int rows = skinRect->rows;
     //X軸偏移量
-    int xOffset = (screenWidth - cols) / 2;
+    int xOffset = cols / 2;
     //Y軸偏移量
-    int yOffset = (screenHeight - rows) / 2;
-    int x = screenCenterX - xOffset;
-    int y = screenCenterY - yOffset;
+    int yOffset = rows / 2;
+    int x = xOffset;
+    int y = yOffset;
     //觸摸區域
     Rect touchedRect = Rect();
     //設定觸摸區域左上角座標 X & Y 若是小於5 則設為0
@@ -232,6 +262,8 @@ void findHandsContoursByCamera(Mat *cvMat, JNIEnv *env) {
     Rect rect;
     int maxWidth = 0;
     int maxHeight = 0;
+    int camWidth = cvMat->cols;
+    int camHeight = cvMat->rows;
     for (int i = 0; i < contours.size(); i++) {
         approxPolyDP(Mat(contours[i]), contours_poly[i], 3, true);
         //計算可以包含輪廓的最小長方形區域
@@ -240,12 +272,43 @@ void findHandsContoursByCamera(Mat *cvMat, JNIEnv *env) {
             rect = tempRect;
         }
     }
-    int detectWidth = detectMat.rows / 2;
-    int detectHeight = detectMat.cols / 2;
     if (rect.area() > 1000) {
         Scalar color = Scalar(255, 0, 0);
-        drawContours(*cvMat, contours_poly, 1, color, 1, 8, vector<Vec4i>(), 0, Point());
+//        drawContours(*cvMat, contours_poly, 1, color, 1, 8, vector<Vec4i>(), 0, Point());
+        int centerX = rect.tl().x + rect.width / 2;
+        int centerY = rect.tl().y + rect.height / 2;
+        int height = rect.height;
+        if (ifInit) {
+            rectHeight = height;
+            startPoint.x = centerX;
+            startPoint.y = centerY;
+            ifInit = 0;
+        } else {
+            int moveXDistance = (centerX - startPoint.x);
+            int moveYDistance = (centerY - startPoint.y);
+            if (moveXDistance > camWidth / 3 & abs(moveYDistance) < abs(camHeight / 3)) {
+                //right
+                handsMove(env, 4);
+            } else if (moveXDistance < -camWidth / 3 & abs(moveYDistance) < abs(camHeight / 3)) {
+                //left
+                handsMove(env, 5);
+            } else if (abs(moveXDistance) < abs(camWidth / 3) & moveYDistance > camHeight / 3) {
+                //down
+                handsMove(env, 6);
+            } else if (abs(moveXDistance) < abs(camWidth / 3) & moveYDistance < -camHeight / 3) {
+                //up
+                handsMove(env, 7);
+            } else {
+                positionX = centerX;
+                positionY = centerY;
+                moveX = moveXDistance;
+                moveY = moveYDistance;
+                handsMove(env, 8);
+            }
+        }
         rectangle(*cvMat, rect.tl(), rect.br(), color, 2, 8, 0);
+    } else {
+        ifInit = 1;
     }
 }
 
@@ -342,11 +405,18 @@ void Java_com_baobomb_handsdetection_HandsDetecter_detectFromThermal(
 
 void Java_com_baobomb_handsdetection_HandsDetecter_setSkinColor(
         JNIEnv *env,
-        jobject, jlong nativeMat, jint screenWidth, jint screenHeight, jint screenCenterX,
-        jint screenCenterY) {
+        jobject, jlong nativeMat) {
     Mat *cvMat = (Mat *) nativeMat;
-    setSkinColor(cvMat, screenWidth, screenHeight, screenCenterX, screenCenterY);
+    setSkinColor(cvMat);
 //    connectComponent(cvMat, empty);
+}
+
+void Java_com_baobomb_handsdetection_HandsDetecter_setHandsDetectRect(
+        JNIEnv *env,
+        jobject, jlong holeMat) {
+    Mat *hole = (Mat *) holeMat;
+    setHandsDetectRect(hole);
+//    motionEventCallback(env);
 }
 
 void Java_com_baobomb_handsdetection_HandsDetecter_detectFromCamera(
